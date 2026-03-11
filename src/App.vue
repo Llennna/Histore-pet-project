@@ -1,3 +1,122 @@
+<template>
+  <div class="app">
+    <!-- Шапка с пользователем -->
+    <header>
+      <h1>📜 Историческая викторина</h1>
+      <div v-if="user" class="user-info">
+        <div v-if="user.photo_url" class="user-avatar">
+          <img :src="user.photo_url" :alt="user.first_name">
+        </div>
+        <div class="user-details">
+          <span class="user-name">{{ user.first_name }}</span>
+          <span class="user-score">⭐ {{ user.total_score || 0 }} очков</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- Загрузка -->
+      <div v-if="loading" class="loading">
+        Загрузка...
+      </div>
+
+      <!-- Экран с вопросом -->
+      <div v-else-if="currentQuestion" class="game-screen">
+        <div class="question-header">
+          <span class="difficulty" :class="currentQuestion.difficulty">
+            {{ getDifficultyText(currentQuestion.difficulty) }}
+          </span>
+          <span class="era">{{ currentQuestion.era }}</span>
+        </div>
+        
+        <h2 class="question">{{ currentQuestion.question }}</h2>
+        
+        <div class="options">
+          <button 
+            v-for="option in options" 
+            :key="option.letter"
+            @click="handleAnswer(option.letter)"
+            :disabled="answered"
+            class="option-btn"
+            :class="{ 
+              'correct': answered && option.letter === currentQuestion.correct_answer,
+              'wrong': answered && selectedAnswer === option.letter && option.letter !== currentQuestion.correct_answer
+            }"
+          >
+            <span class="option-letter">{{ option.letter }}.</span>
+            {{ option.text }}
+          </button>
+        </div>
+
+        <div v-if="answered" class="answer-feedback">
+          <div v-if="selectedAnswer === currentQuestion.correct_answer" class="correct-feedback">
+            ✅ Правильно! +10 очков
+          </div>
+          <div v-else class="wrong-feedback">
+            ❌ Неправильно! Правильный ответ: {{ currentQuestion.correct_answer }}
+          </div>
+          <button @click="nextQuestion" class="next-btn">
+            Следующий вопрос →
+          </button>
+        </div>
+      </div>
+
+      <!-- Главное меню -->
+      <div v-else class="menu-screen">
+        <button @click="startGame" class="play-btn">
+          🎮 Начать игру
+        </button>
+
+        <div class="menu-buttons">
+          <button @click="showLeaderboard" class="menu-btn">
+            🏆 Лидерборд
+          </button>
+          <button @click="showAchievements" class="menu-btn">
+            🎖️ Достижения
+          </button>
+        </div>
+
+        <!-- Лидерборд -->
+        <div v-if="leaderboardVisible" class="leaderboard">
+          <h3>🏆 Топ игроков</h3>
+          <div v-if="leaderboard.length === 0" class="empty-state">
+            Пока нет игроков
+          </div>
+          <div v-else>
+            <div v-for="(player, index) in leaderboard" :key="player.id" class="leaderboard-item">
+              <span class="rank">{{ index + 1 }}</span>
+              <span class="player-name">{{ player.first_name }}</span>
+              <span class="player-score">⭐ {{ player.total_score || 0 }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Достижения -->
+        <div v-if="achievementsVisible" class="achievements">
+          <h3>🎖️ Мои достижения</h3>
+          <div v-if="userAchievements.length === 0" class="empty-state">
+            Пока нет достижений
+          </div>
+          <div v-else>
+            <div v-for="ach in userAchievements" :key="ach.id" class="achievement-item">
+              <span class="achievement-icon">{{ ach.icon || '🏅' }}</span>
+              <div class="achievement-info">
+                <span class="achievement-name">{{ ach.name }}</span>
+                <span class="achievement-desc">{{ ach.description }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Уведомления -->
+    <div v-if="notification" class="notification" :class="notification.type">
+      {{ notification.message }}
+    </div>
+  </div>
+</template>
+
 <script>
 import { ref, computed, onMounted } from 'vue'
 
@@ -16,10 +135,7 @@ export default {
     const achievementsVisible = ref(false)
     const notification = ref(null)
 
-    // ✅ Берем URL из переменной окружения
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-
-    // Опции для текущего вопроса
     const options = computed(() => {
       if (!currentQuestion.value) return []
       return [
@@ -44,10 +160,8 @@ export default {
           tg.ready()
           tg.expand()
           
-          // Авторизация на бэкенде
           await authUser(tg.initDataUnsafe.user)
         } else {
-          // Для теста вне Telegram
           await authUser({
             id: '123456',
             first_name: 'Тестовый',
@@ -110,10 +224,8 @@ export default {
       const isCorrect = letter === currentQuestion.value.correct_answer
       
       if (isCorrect && user.value) {
-        // Обновляем счет пользователя
         user.value.total_score = (user.value.total_score || 0) + 10
         
-        // Отправляем результат на бэкенд
         try {
           await fetch(`${API_URL}/api/quiz/answer`, {
             method: 'POST',
@@ -219,6 +331,7 @@ export default {
   }
 }
 </script>
+
 <style>
 * {
   margin: 0;
