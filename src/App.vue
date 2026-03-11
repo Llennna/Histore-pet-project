@@ -179,7 +179,7 @@ export default {
     // Авторизация пользователя
     async function authUser(telegramUser) {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/users/auth', {
+        const response = await fetch('http://192.168.0.5:8000/api/users/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(telegramUser)
@@ -206,7 +206,7 @@ export default {
       selectedAnswer.value = null
       
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/questions/random')
+        const response = await fetch('http://192.168.0.5:8000/api/questions/random')
         currentQuestion.value = await response.json()
       } catch (error) {
         showNotification('Ошибка загрузки вопроса', 'error')
@@ -231,7 +231,7 @@ export default {
         
         // Отправляем результат на бэкенд
         try {
-          await fetch('http://127.0.0.1:8000/api/quiz/answer', {
+          await fetch('http://192.168.0.5:8000/api/quiz/answer', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -267,7 +267,7 @@ export default {
     // Загрузить лидерборд
     async function loadLeaderboard() {
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/leaderboard?limit=10')
+        const response = await fetch('http://192.168.0.5:8000/api/leaderboard?limit=10')
         leaderboard.value = await response.json()
       } catch (error) {
         console.error('Ошибка загрузки лидерборда', error)
@@ -286,7 +286,7 @@ export default {
     // Загрузить достижения пользователя
     async function loadUserAchievements() {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/user/${user.value.id}/achievements`)
+        const response = await fetch(`http://192.168.0.5:8000/api/user/${user.value.id}/achievements`)
         userAchievements.value = await response.json()
       } catch (error) {
         console.error('Ошибка загрузки достижений', error)
