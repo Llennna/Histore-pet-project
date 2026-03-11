@@ -1,122 +1,3 @@
-<!-- frontend/src/App.vue -->
-<template>
-  <div class="app">
-    <header>
-      <h1>📜 Историческая викторина</h1>
-      <div v-if="user" class="user-info">
-        <div class="user-avatar" v-if="user.photo_url">
-          <img :src="user.photo_url" :alt="user.first_name">
-        </div>
-        <div class="user-details">
-          <span class="user-name">{{ user.first_name }}</span>
-          <span class="user-score">⭐ {{ user.total_score || 0 }} очков</span>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <!-- Состояние загрузки -->
-      <div v-if="loading" class="loading">
-        Загрузка...
-      </div>
-
-      <!-- Экран с вопросом -->
-      <div v-else-if="currentQuestion" class="game-screen">
-        <div class="question-header">
-          <span class="difficulty" :class="currentQuestion.difficulty">
-            {{ getDifficultyText(currentQuestion.difficulty) }}
-          </span>
-          <span class="era">{{ currentQuestion.era }}</span>
-        </div>
-        
-        <h2 class="question">{{ currentQuestion.question }}</h2>
-        
-        <div class="options">
-          <button 
-            v-for="option in options" 
-            :key="option.letter"
-            @click="handleAnswer(option.letter)"
-            :disabled="answered"
-            class="option-btn"
-            :class="{ 
-              'correct': answered && option.letter === currentQuestion.correct_answer,
-              'wrong': answered && selectedAnswer === option.letter && option.letter !== currentQuestion.correct_answer
-            }"
-          >
-            <span class="option-letter">{{ option.letter }}.</span>
-            {{ option.text }}
-          </button>
-        </div>
-
-        <div v-if="answered" class="answer-feedback">
-          <div v-if="selectedAnswer === currentQuestion.correct_answer" class="correct-feedback">
-            ✅ Правильно! +10 очков
-          </div>
-          <div v-else class="wrong-feedback">
-            ❌ Неправильно! Правильный ответ: {{ currentQuestion.correct_answer }}
-          </div>
-          <button @click="nextQuestion" class="next-btn">
-            Следующий вопрос →
-          </button>
-        </div>
-      </div>
-
-      <!-- Главное меню -->
-      <div v-else class="menu-screen">
-        <button @click="startGame" class="play-btn">
-          🎮 Начать игру
-        </button>
-
-        <div class="menu-buttons">
-          <button @click="showLeaderboard" class="menu-btn">
-            🏆 Лидерборд
-          </button>
-          <button @click="showAchievements" class="menu-btn">
-            🎖️ Достижения
-          </button>
-        </div>
-
-        <!-- Лидерборд -->
-        <div v-if="leaderboardVisible" class="leaderboard">
-          <h3>🏆 Топ игроков</h3>
-          <div v-if="leaderboard.length === 0" class="empty-state">
-            Пока нет игроков
-          </div>
-          <div v-else>
-            <div v-for="(player, index) in leaderboard" :key="player.id" class="leaderboard-item">
-              <span class="rank">{{ index + 1 }}</span>
-              <span class="player-name">{{ player.first_name }}</span>
-              <span class="player-score">⭐ {{ player.total_score || 0 }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Достижения -->
-        <div v-if="achievementsVisible" class="achievements">
-          <h3>🎖️ Мои достижения</h3>
-          <div v-if="userAchievements.length === 0" class="empty-state">
-            Пока нет достижений
-          </div>
-          <div v-else>
-            <div v-for="ach in userAchievements" :key="ach.id" class="achievement-item">
-              <span class="achievement-icon">{{ ach.icon || '🏅' }}</span>
-              <div class="achievement-info">
-                <span class="achievement-name">{{ ach.name }}</span>
-                <span class="achievement-desc">{{ ach.description }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- Уведомления -->
-    <div v-if="notification" class="notification" :class="notification.type">
-      {{ notification.message }}
-    </div>
-  </div>
-</template>
-
 <script>
 import { ref, computed, onMounted } from 'vue'
 
@@ -134,6 +15,9 @@ export default {
     const leaderboardVisible = ref(false)
     const achievementsVisible = ref(false)
     const notification = ref(null)
+
+    // ✅ Берем URL из переменной окружения
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
     // Опции для текущего вопроса
     const options = computed(() => {
@@ -179,7 +63,7 @@ export default {
     // Авторизация пользователя
     async function authUser(telegramUser) {
       try {
-        const response = await fetch('http://192.168.0.5:8000/api/users/auth', {
+        const response = await fetch(`${API_URL}/api/users/auth`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(telegramUser)
@@ -206,7 +90,7 @@ export default {
       selectedAnswer.value = null
       
       try {
-        const response = await fetch('http://192.168.0.5:8000/api/questions/random')
+        const response = await fetch(`${API_URL}/api/questions/random`)
         currentQuestion.value = await response.json()
       } catch (error) {
         showNotification('Ошибка загрузки вопроса', 'error')
@@ -231,7 +115,7 @@ export default {
         
         // Отправляем результат на бэкенд
         try {
-          await fetch('http://192.168.0.5:8000/api/quiz/answer', {
+          await fetch(`${API_URL}/api/quiz/answer`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -267,10 +151,11 @@ export default {
     // Загрузить лидерборд
     async function loadLeaderboard() {
       try {
-        const response = await fetch('http://192.168.0.5:8000/api/leaderboard?limit=10')
+        const response = await fetch(`${API_URL}/api/leaderboard?limit=10`)
         leaderboard.value = await response.json()
       } catch (error) {
         console.error('Ошибка загрузки лидерборда', error)
+        showNotification('Ошибка загрузки лидерборда', 'error')
       }
     }
 
@@ -286,10 +171,11 @@ export default {
     // Загрузить достижения пользователя
     async function loadUserAchievements() {
       try {
-        const response = await fetch(`http://192.168.0.5:8000/api/user/${user.value.id}/achievements`)
+        const response = await fetch(`${API_URL}/api/user/${user.value.id}/achievements`)
         userAchievements.value = await response.json()
       } catch (error) {
         console.error('Ошибка загрузки достижений', error)
+        showNotification('Ошибка загрузки достижений', 'error')
       }
     }
 
@@ -333,7 +219,6 @@ export default {
   }
 }
 </script>
-
 <style>
 * {
   margin: 0;
